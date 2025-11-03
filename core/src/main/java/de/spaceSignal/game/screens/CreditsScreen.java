@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.math.MathUtils;
+
 import de.spaceSignal.game.Main;
 import de.spaceSignal.game.util.Constants;
 import de.spaceSignal.game.util.ScrollingBackground;
@@ -121,27 +122,35 @@ public class CreditsScreen extends BaseScreen {
         try {
             FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/Orbitron-Regular.ttf"));
             FreeTypeFontGenerator.FreeTypeFontParameter param = new FreeTypeFontGenerator.FreeTypeFontParameter();
-            float scaleFactor = Constants.SCREEN_WIDTH / 1280f;
+            float scaleFactor = Math.min(Constants.SCREEN_WIDTH / 1280f, 1.0f); // Begrenzt die maximale Größe
+
+            // Allgemeine Font-Einstellungen für bessere Lesbarkeit
+            param.spaceX = 0; // Kein zusätzlicher horizontaler Abstand zwischen Zeichen
+            param.padLeft = param.padRight = 1; // Minimaler Rand für Zeichen
+            param.shadowOffsetX = param.shadowOffsetY = 1; // Leichter Schatten für bessere Lesbarkeit
 
             // Standard Title Font
-            param.size = (int) (36 * scaleFactor); // Größer für bessere Lesbarkeit
+            param.size = (int) (32 * scaleFactor); // Etwas kleiner
             param.color = new Color(0.3f, 0.85f, 1f, 1f);
             param.borderColor = new Color(0.1f, 0.4f, 0.6f, 1f);
-            param.borderWidth = 2f * scaleFactor;
+            param.borderWidth = 1.5f * scaleFactor;
+            param.shadowColor = new Color(0, 0, 0, 0.5f);
             titleFont = generator.generateFont(param);
 
             // Standard Credits Font
-            param.size = (int) (24 * scaleFactor); // Größer für bessere Lesbarkeit
+            param.size = (int) (20 * scaleFactor); // Kleiner für bessere Breite
             param.color = new Color(0.85f, 0.9f, 1f, 1f);
             param.borderColor = new Color(0.3f, 0.3f, 0.4f, 1f);
-            param.borderWidth = 1.2f * scaleFactor;
+            param.borderWidth = 1f * scaleFactor;
+            param.shadowColor = new Color(0, 0, 0, 0.3f);
             creditsFont = generator.generateFont(param);
 
             // Hervorgehobener Font für zentrierte Elemente
-            param.size = (int) (28 * scaleFactor); // Größer für Hervorhebung
+            param.size = (int) (24 * scaleFactor); // Etwas kleiner als vorher
             param.color = new Color(1f, 1f, 1f, 1f);
             param.borderColor = new Color(0.2f, 0.6f, 1f, 1f);
-            param.borderWidth = 2.5f * scaleFactor;
+            param.borderWidth = 2f * scaleFactor;
+            param.shadowColor = new Color(0, 0, 0, 0.4f);
             highlightedFont = generator.generateFont(param);
 
             generator.dispose();
@@ -229,28 +238,38 @@ public class CreditsScreen extends BaseScreen {
     private void draw() {
         game.batch.begin();
 
-        // Hintergrund rendern
+        // Hintergrund rendern mit gestaffelter Transparenz
         if (background != null) {
+            // Erste Ebene: Hintergrund mit leichter Transparenz
+            game.batch.setColor(1, 1, 1, 0.7f);
             background.render(game.batch);
+            
+            // Zweite Ebene: Dunkleres Overlay mit Verlauf
+            game.batch.setColor(0.02f, 0.02f, 0.08f, 0.7f);
+            game.batch.draw(createSolidTexture(), 0, 0, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT / 2f);
+            
+            // Dritte Ebene: Noch dunkleres Overlay für die untere Hälfte
+            game.batch.setColor(0.01f, 0.01f, 0.04f, 0.8f);
+            game.batch.draw(createSolidTexture(), 0, Constants.SCREEN_HEIGHT / 2f, 
+                          Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT / 2f);
         }
 
-        // Dunkles Overlay für bessere Lesbarkeit
-        game.batch.setColor(0.02f, 0.02f, 0.08f, 0.5f); // Dunkler für besseren Kontrast
-        game.batch.draw(createSolidTexture(), 0, 0, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
+        // Reset color
         game.batch.setColor(1, 1, 1, 1);
 
         // Credits Text zeichnen
         float y = scrollOffset;
         float centerX = Constants.SCREEN_WIDTH / 2f;
-        float lineSpacing = 55 * (Constants.SCREEN_HEIGHT / 480f); // Mehr Abstand
+        float lineSpacing = 40 * (Constants.SCREEN_HEIGHT / 480f); // Reduzierter Abstand
+        float emptyLineSpacing = 20 * (Constants.SCREEN_HEIGHT / 480f); // Noch kleinerer Abstand für Leerzeilen
         float centerY = Constants.SCREEN_HEIGHT / 2f;
 
         currentHighlightedIndex = -1;
 
         for (int i = 0; i < credits.length; i++) {
-            String line = credits[i];
+            String line = credits[i].trim(); // Entferne Leerzeichen am Anfang und Ende
             if (line.isEmpty()) {
-                y += lineSpacing;
+                y += emptyLineSpacing; // Kleinerer Abstand für Leerzeilen
                 continue;
             }
 
