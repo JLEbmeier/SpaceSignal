@@ -5,6 +5,8 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+
+import de.spaceSignal.game.managers.AudioManager;
 import de.spaceSignal.game.util.Constants;
 
 public class Enemy {
@@ -53,6 +55,8 @@ public class Enemy {
             health -= damage;
             if (health <= 0) {
                 alive = false;
+                // Spiele Explosions-Sound wenn der Gegner zerstört wird
+                AudioManager.getInstance().playExplosionSound();
             }
         }
     }

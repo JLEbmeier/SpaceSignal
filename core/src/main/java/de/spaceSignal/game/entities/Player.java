@@ -8,6 +8,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+
+import de.spaceSignal.game.managers.AudioManager;
 import de.spaceSignal.game.util.Constants;
 
 public class Player {
@@ -60,6 +62,8 @@ public class Player {
         health -= damage;
         if (health <= 0) {
             alive = false;
+            // Play explosion sound when player dies
+            AudioManager.getInstance().playExplosionSound();
         }
     }
 
@@ -69,6 +73,8 @@ public class Player {
 
     public void resetFireTimer() {
         fireTimer = 0;
+        // Play shoot sound when firing
+        AudioManager.getInstance().playShootSound();
     }
 
     public void applyUpgrade(String type) {
@@ -83,6 +89,8 @@ public class Player {
                 damageMultiplier += 0.5f;
                 break;
         }
+        // Play powerup sound when collecting any upgrade
+        AudioManager.getInstance().playPowerupSound();
     }
 
     public Vector2 getPosition() {

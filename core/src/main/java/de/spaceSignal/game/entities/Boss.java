@@ -1,6 +1,5 @@
 package de.spaceSignal.game.entities;
 
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -8,6 +7,8 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
+
+import de.spaceSignal.game.managers.AudioManager;
 import de.spaceSignal.game.util.Constants;
 
 public class Boss {
@@ -153,6 +154,9 @@ public class Boss {
                 position.y + bounds.height / 2
             );
 
+            // Spiele Explosions-Sound
+            AudioManager.getInstance().playExplosionSound();
+
             // Initiale Explosions-Partikel erzeugen
             createInitialExplosion();
 
@@ -238,6 +242,9 @@ public class Boss {
 
     private void fireBullets() {
         int bulletCount = 1 + (level / 2);
+
+        // Spiele den Schuss-Sound
+        AudioManager.getInstance().playShootSound();
 
         switch (level) {
             case 1:
