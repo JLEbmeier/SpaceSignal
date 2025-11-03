@@ -12,11 +12,36 @@ public class Constants {
     public static final int PLAYER_MAX_HEALTH = 3;
     public static final float PLAYER_FIRE_RATE = 0.2f; // Schüsse pro Sekunde
 
-    // Gegner
+    // Gegner Basis
     public static final float ENEMY_SPEED = 100f;
     public static final float ENEMY_WIDTH = 32f;
     public static final float ENEMY_HEIGHT = 32f;
     public static final float ENEMY_SPAWN_INTERVAL = 2f;
+    public static final float BASE_ENEMY_HEALTH = 1f;
+
+    // Scout
+    public static final float SCOUT_SPEED = ENEMY_SPEED * 1.8f;
+    public static final float SCOUT_HEALTH = BASE_ENEMY_HEALTH * 0.5f;
+    
+    // Tank
+    public static final float TANK_SPEED = ENEMY_SPEED * 0.5f;
+    public static final float TANK_HEALTH = BASE_ENEMY_HEALTH * 4f;
+    
+    // Bomber
+    public static final float BOMBER_SPEED = ENEMY_SPEED * 0.7f;
+    public static final float BOMBER_HEALTH = BASE_ENEMY_HEALTH * 2f;
+    public static final float BOMBER_EXPLOSION_RADIUS = 100f;
+    public static final float BOMBER_EXPLOSION_DAMAGE = 2f;
+    
+    // Shooter
+    public static final float SHOOTER_SPEED = ENEMY_SPEED * 0.8f;
+    public static final float SHOOTER_HEALTH = BASE_ENEMY_HEALTH * 1.5f;
+    public static final float SHOOTER_FIRE_RATE = 1.5f;
+    
+    // Elite
+    public static final float ELITE_SPEED = ENEMY_SPEED * 1.2f;
+    public static final float ELITE_HEALTH = BASE_ENEMY_HEALTH * 3f;
+    public static final float ELITE_FIRE_RATE = 1.0f;
 
     // Projektile
     public static final float BULLET_SPEED = 400f;

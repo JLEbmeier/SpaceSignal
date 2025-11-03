@@ -5,19 +5,23 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.ScreenUtils;
+
 import de.spaceSignal.game.Main;
+import de.spaceSignal.game.entities.BomberEnemy;
 import de.spaceSignal.game.entities.Boss;
 import de.spaceSignal.game.entities.BossBullet;
 import de.spaceSignal.game.entities.Bullet;
 import de.spaceSignal.game.entities.Enemy;
 import de.spaceSignal.game.entities.Player;
+import de.spaceSignal.game.entities.ScoutEnemy;
 import de.spaceSignal.game.entities.Upgrade;
+import de.spaceSignal.game.managers.AssetManager;
+import de.spaceSignal.game.systems.SpawnSystem;
 import de.spaceSignal.game.util.Constants;
 import de.spaceSignal.game.util.ScrollingBackground;
 
@@ -28,7 +32,7 @@ public class GameScreen extends BaseScreen {
     private Array<Bullet> bullets;
     private Array<Enemy> enemies;
     private Array<Upgrade> upgrades;
-    private float enemySpawnTimer;
+    private SpawnSystem spawnSystem;
     private int score;
     private int wave;
     private float timeLeft;
@@ -53,7 +57,15 @@ public class GameScreen extends BaseScreen {
         initializeFonts();
         initializeEntities();
 
-        enemySpawnTimer = 0;
+        // Initialize spawn system
+        AssetManager assetManager = AssetManager.getInstance();
+        spawnSystem = new SpawnSystem(
+            assetManager.getEnemyTexture(),
+            assetManager.getBulletTexture(),
+            assetManager.getBomberTexture(),
+            assetManager.getScoutTexture()
+        );
+
         score = 0;
         wave = 1;
         gameOverTimer = 0;
@@ -65,7 +77,7 @@ public class GameScreen extends BaseScreen {
         bulletPool = new Pool<Bullet>() {
             @Override
             protected Bullet newObject() {
-                return new Bullet(0, 0, 0, 0, 0, new Texture(Gdx.files.internal("textures/bullet.png")), gameMode);
+                return new Bullet(0, 0, 0, 0, 0, AssetManager.getInstance().getBulletTexture(), gameMode);
             }
         };
 
@@ -263,13 +275,15 @@ public class GameScreen extends BaseScreen {
             }
         }
 
-        enemySpawnTimer += delta;
-        float spawnInterval = getSpawnInterval();
-        if (enemySpawnTimer >= spawnInterval) {
-            spawnEnemy();
-            enemySpawnTimer = 0;
-        }
+        // Update spawn system
+        spawnSystem.update(delta);
+        
+        // Get new enemies from spawn system
+        Array<Enemy> newEnemies = spawnSystem.getEnemies();
+        enemies.addAll(newEnemies);
+        newEnemies.clear();
 
+        // Update existing enemies
         for (int i = enemies.size - 1; i >= 0; i--) {
             Enemy enemy = enemies.get(i);
             enemy.update(delta);
@@ -281,6 +295,8 @@ public class GameScreen extends BaseScreen {
                 }
                 if (score % 100 == 0) {
                     wave++;
+                    // Increase difficulty in spawn system
+                    spawnSystem.increaseDifficulty();
                 }
             }
         }
@@ -362,8 +378,31 @@ public class GameScreen extends BaseScreen {
         float x = MathUtils.random(0, Constants.SCREEN_WIDTH - Constants.ENEMY_WIDTH);
         float y = Constants.SCREEN_HEIGHT;
         float health = getEnemyHealth();
-        Texture enemyTexture = new Texture(Gdx.files.internal("textures/enemy.png"));
-        enemies.add(new Enemy(x, y, health, enemyTexture, gameMode));
+        AssetManager assetManager = AssetManager.getInstance();
+
+        // Wähle zufällig einen Gegnertyp basierend auf dem Fortschritt
+        float random = MathUtils.random(1f);
+        Enemy enemy;
+
+        if (wave < 3) {
+            // Frühe Wellen: Hauptsächlich normale Gegner
+            if (random < 0.8f) {
+                enemy = new Enemy(x, y, health, assetManager.getEnemyTexture(), gameMode);
+            } else {
+                enemy = new ScoutEnemy(x, y, assetManager.getScoutTexture());
+            }
+        } else {
+            // Spätere Wellen: Alle Gegnertypen
+            if (random < 0.4f) {
+                enemy = new Enemy(x, y, health, assetManager.getEnemyTexture(), gameMode);
+            } else if (random < 0.7f) {
+                enemy = new ScoutEnemy(x, y, assetManager.getScoutTexture());
+            } else {
+                enemy = new BomberEnemy(x, y, assetManager.getBomberTexture());
+            }
+        }
+
+        enemies.add(enemy);
     }
 
     private void spawnUpgrade(float x, float y) {
