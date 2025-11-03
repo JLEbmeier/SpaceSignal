@@ -27,5 +27,17 @@ public class Constants {
     public static final float UPGRADE_FALL_SPEED = 80f;
     public static final float UPGRADE_SPAWN_CHANCE = 0.3f;
 
+    // Boss Konstanten
+    public static final float BOSS_WIDTH = 100;
+    public static final float BOSS_HEIGHT = 70;
+    public static final float BOSS_SPEED = 150;  // Erhöhte Geschwindigkeit
+    public static final float BOSS_BULLET_WIDTH = 12;
+    public static final float BOSS_BULLET_HEIGHT = 20;
+    public static final float BOSS_BULLET_SPEED = 180;
+
+    // Boss Rush spezifisch
+    public static final int BOSS_RUSH_START_LEVEL = 1;
+    public static final int BOSS_RUSH_MAX_LEVEL = 10;
+
     private Constants() {}
 }

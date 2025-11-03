@@ -13,37 +13,38 @@ import de.spaceSignal.game.Main;
 import de.spaceSignal.game.util.Constants;
 import de.spaceSignal.game.util.ScrollingBackground;
 
-public class MainMenuScreen extends BaseScreen {
+public class GameSelectionScreen extends BaseScreen {
     private BitmapFont titleFont;
     private BitmapFont menuFont;
     private BitmapFont descFont;
     private GlyphLayout layout;
     private ScrollingBackground background;
-    private String title = "SPACE SIGNAL";
-    private final MenuItem[] menuItems = {
-        new MenuItem("Play", "Start your space adventure"),
-        new MenuItem("Settings", "Adjust game options"),
-        new MenuItem("Credits", "Meet the creators"),
-        new MenuItem("Exit", "Quit the game")
-    };
-    private int selectedIndex = 0;
-    private float animationTimer = 0;
-    private boolean transitionOut = false;
 
-    private static class MenuItem {
+    private static class GameMode {
         String name;
         String description;
         float scale = 1f;
-        float alpha = 1f;
+        float alpha = 0.7f;
         float glowIntensity = 0f;
 
-        MenuItem(String name, String description) {
+        GameMode(String name, String description) {
             this.name = name;
             this.description = description;
         }
     }
 
-    public MainMenuScreen(Main game) {
+    private final GameMode[] modes = {
+        new GameMode("Classic", "Traditional gameplay experience"),
+        new GameMode("Survival", "Endless waves of enemies"),
+        new GameMode("Time Attack", "Race against the clock"),
+        new GameMode("Boss Rush", "Fight powerful bosses") // Kürzere Beschreibung
+    };
+
+    private int selectedIndex = 0;
+    private float animationTimer = 0;
+    private boolean transitionOut = false;
+
+    public GameSelectionScreen(Main game) {
         super(game);
         initializeFonts();
         layout = new GlyphLayout();
@@ -56,33 +57,35 @@ public class MainMenuScreen extends BaseScreen {
             FreeTypeFontGenerator.FreeTypeFontParameter param = new FreeTypeFontGenerator.FreeTypeFontParameter();
             float scaleFactor = Constants.SCREEN_WIDTH / 1280f;
 
-            // Titel mit Glow
-            param.size = (int) (52 * scaleFactor);
-            param.color = new Color(0.2f, 0.8f, 1f, 1f);
+            // Kleinere Titel-Font für mehr Platz
+            param.size = (int) (36 * scaleFactor);
+            param.color = new Color(0.3f, 0.85f, 1f, 1f);
             param.borderColor = new Color(0.1f, 0.4f, 0.6f, 1f);
-            param.borderWidth = 2 * scaleFactor;
+            param.borderWidth = 1.5f * scaleFactor;
             titleFont = generator.generateFont(param);
 
-            param.size = (int) (26 * scaleFactor);
+            // Kleinere Menu-Font
+            param.size = (int) (22 * scaleFactor);
             param.color = Color.WHITE;
             param.borderColor = new Color(0.3f, 0.3f, 0.4f, 1f);
-            param.borderWidth = 1.5f * scaleFactor;
+            param.borderWidth = 1.2f * scaleFactor;
             menuFont = generator.generateFont(param);
 
-            param.size = (int) (18 * scaleFactor);
+            // Kleinere Beschreibungs-Font
+            param.size = (int) (14 * scaleFactor);
             param.color = new Color(0.7f, 0.8f, 0.9f, 1f);
             param.borderWidth = 0;
             descFont = generator.generateFont(param);
 
             generator.dispose();
         } catch (Exception e) {
-            Gdx.app.error("MainMenuScreen", "Failed to load Orbitron-Regular.ttf", e);
+            Gdx.app.error("GameSelectionScreen", "Font error", e);
             titleFont = new BitmapFont();
-            titleFont.getData().setScale(2f);
-            titleFont.setColor(Color.CYAN);
+            titleFont.getData().setScale(1.3f);
             menuFont = new BitmapFont();
-            menuFont.getData().setScale(1.2f);
+            menuFont.getData().setScale(1.0f);
             descFont = new BitmapFont();
+            descFont.getData().setScale(0.7f);
         }
     }
 
@@ -93,13 +96,12 @@ public class MainMenuScreen extends BaseScreen {
                 background = new ScrollingBackground(new Texture(Gdx.files.internal(bgPath)));
             }
         } catch (Exception e) {
-            Gdx.app.error("MainMenuScreen", "Failed to initialize background", e);
+            Gdx.app.error("GameSelectionScreen", "Failed to initialize background", e);
         }
     }
 
     @Override
     public void render(float delta) {
-        // Einfacher Hintergrund
         Gdx.gl.glClearColor(0.01f, 0.01f, 0.05f, 1f);
         Gdx.gl.glClear(com.badlogic.gdx.graphics.GL20.GL_COLOR_BUFFER_BIT);
 
@@ -114,55 +116,35 @@ public class MainMenuScreen extends BaseScreen {
         if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
             selectedIndex = Math.max(0, selectedIndex - 1);
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
-            selectedIndex = Math.min(menuItems.length - 1, selectedIndex + 1);
+            selectedIndex = Math.min(modes.length - 1, selectedIndex + 1);
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER) || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-            handleSelection();
+            transitionOut = true;
+            animationTimer = 0;
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            game.setScreen(new MainMenuScreen(game));
+            dispose();
         }
 
         // Smooth animations
-        for (int i = 0; i < menuItems.length; i++) {
-            MenuItem item = menuItems[i];
-            float targetScale = (i == selectedIndex) ? 1.15f : 1f;
+        for (int i = 0; i < modes.length; i++) {
+            GameMode mode = modes[i];
+            float targetScale = (i == selectedIndex) ? 1.10f : 1f; // Weniger Skalierung
             float targetAlpha = (i == selectedIndex) ? 1f : 0.6f;
             float targetGlow = (i == selectedIndex) ? 1f : 0f;
 
-            item.scale = Interpolation.smooth.apply(item.scale, targetScale, 0.15f);
-            item.alpha = Interpolation.smooth.apply(item.alpha, targetAlpha, 0.15f);
-            item.glowIntensity = Interpolation.smooth.apply(item.glowIntensity, targetGlow, 0.1f);
+            mode.scale = Interpolation.smooth.apply(mode.scale, targetScale, 0.15f);
+            mode.alpha = Interpolation.smooth.apply(mode.alpha, targetAlpha, 0.15f);
+            mode.glowIntensity = Interpolation.smooth.apply(mode.glowIntensity, targetGlow, 0.1f);
         }
 
-        if (transitionOut) {
-            float alpha = Interpolation.fade.apply(1f, 0f, animationTimer / 0.5f);
-            titleFont.setColor(titleFont.getColor().r, titleFont.getColor().g, titleFont.getColor().b, alpha);
-            if (animationTimer >= 0.5f) {
-                finalizeSelection();
-            }
+        if (transitionOut && animationTimer >= 0.5f) {
+            game.setScreen(new GameScreen(game, modes[selectedIndex].name));
+            dispose();
         }
-    }
-
-    private void handleSelection() {
-        transitionOut = true;
-        animationTimer = 0;
-    }
-
-    private void finalizeSelection() {
-        switch (menuItems[selectedIndex].name) {
-            case "Exit":
-                Gdx.app.exit();
-                break;
-            case "Play":
-                game.setScreen(new GameSelectionScreen(game));
-                break;
-            case "Settings":
-                game.setScreen(new SettingsScreen(game));
-                break;
-            case "Credits":
-                game.setScreen(new CreditsScreen(game));
-                break;
-        }
-        dispose();
     }
 
     private void draw() {
@@ -175,47 +157,45 @@ public class MainMenuScreen extends BaseScreen {
 
         // Titel mit Puls-Effekt
         float pulse = MathUtils.sin(animationTimer * 2f) * 0.1f + 0.9f;
-        titleFont.setColor(0.2f + pulse * 0.2f, 0.8f, 1f, 1f);
+        titleFont.setColor(0.3f + pulse * 0.2f, 0.85f, 1f, 1f);
 
-        layout.setText(titleFont, title);
+        layout.setText(titleFont, "Select Game Mode");
         float titleX = (Constants.SCREEN_WIDTH - layout.width) / 2;
-        float titleY = Constants.SCREEN_HEIGHT * 0.75f;
-        titleFont.draw(game.batch, title, titleX, titleY);
+        float titleY = Constants.SCREEN_HEIGHT * 0.78f; // Höher positioniert
+        titleFont.draw(game.batch, "Select Game Mode", titleX, titleY);
 
-        // Menüpunkte
-        float menuY = Constants.SCREEN_HEIGHT * 0.5f;
-        for (int i = 0; i < menuItems.length; i++) {
-            MenuItem item = menuItems[i];
+        // Menüpunkte mit mehr Platz
+        float menuY = Constants.SCREEN_HEIGHT * 0.55f; // Mehr Platz nach oben
+        float lineSpacing = 60 * (Constants.SCREEN_HEIGHT / 480f); // Weniger Abstand
+
+        for (int i = 0; i < modes.length; i++) {
+            GameMode mode = modes[i];
 
             // Farbeffekt für ausgewähltes Item
             if (i == selectedIndex) {
-                menuFont.setColor(0.8f + item.glowIntensity * 0.2f,
-                    0.9f + item.glowIntensity * 0.1f,
-                    1f, item.alpha);
+                menuFont.setColor(0.8f + mode.glowIntensity * 0.2f,
+                    0.9f + mode.glowIntensity * 0.1f,
+                    1f, mode.alpha);
             } else {
-                menuFont.setColor(1f, 1f, 1f, item.alpha);
+                menuFont.setColor(1f, 1f, 1f, mode.alpha);
             }
 
-            layout.setText(menuFont, item.name);
+            // Skalierung anwenden
+            menuFont.getData().setScale(mode.scale);
+            layout.setText(menuFont, mode.name);
             float menuX = (Constants.SCREEN_WIDTH - layout.width) / 2;
-            float yPos = menuY - i * 65 * (Constants.SCREEN_HEIGHT / 480f);
+            float yPos = menuY - i * lineSpacing;
 
-            // Einfache Skalierung ohne Matrix-Operationen
-            float scale = item.scale;
-            menuFont.getData().setScale(scale);
-            layout.setText(menuFont, item.name);
-            menuX = (Constants.SCREEN_WIDTH - layout.width) / 2;
-
-            menuFont.draw(game.batch, item.name, menuX, yPos);
+            menuFont.draw(game.batch, mode.name, menuX, yPos);
             menuFont.getData().setScale(1f); // Zurücksetzen
 
             // Beschreibung für ausgewähltes Item
             if (i == selectedIndex) {
-                descFont.setColor(0.7f, 0.85f, 1f, item.alpha * 0.9f);
-                layout.setText(descFont, item.description);
+                descFont.setColor(0.7f, 0.85f, 1f, mode.alpha * 0.9f);
+                layout.setText(descFont, mode.description);
                 float descX = (Constants.SCREEN_WIDTH - layout.width) / 2;
-                descFont.draw(game.batch, item.description, descX,
-                    yPos - 35 * (Constants.SCREEN_HEIGHT / 480f));
+                descFont.draw(game.batch, mode.description, descX,
+                    yPos - 25 * (Constants.SCREEN_HEIGHT / 480f)); // Weniger Abstand
             }
         }
 

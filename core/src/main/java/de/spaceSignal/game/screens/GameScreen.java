@@ -12,6 +12,8 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.ScreenUtils;
 import de.spaceSignal.game.Main;
+import de.spaceSignal.game.entities.Boss;
+import de.spaceSignal.game.entities.BossBullet;
 import de.spaceSignal.game.entities.Bullet;
 import de.spaceSignal.game.entities.Enemy;
 import de.spaceSignal.game.entities.Player;
@@ -34,11 +36,20 @@ public class GameScreen extends BaseScreen {
     private boolean isGameOver;
     private final String gameMode;
     private Pool<Bullet> bulletPool;
-    private ScrollingBackground background; // Neuer Hintergrund
+    private ScrollingBackground background;
+
+    // Boss Rush Variablen
+    private Boss boss;
+    private boolean isBossRushMode;
+    private int bossLevel;
+    private Texture solidTexture;
 
     public GameScreen(Main game, String modeName) {
         super(game);
         this.gameMode = modeName;
+        this.isBossRushMode = modeName.equals("Boss Rush");
+        this.bossLevel = isBossRushMode ? Constants.BOSS_RUSH_START_LEVEL : 0;
+
         initializeFonts();
         initializeEntities();
 
@@ -57,6 +68,8 @@ public class GameScreen extends BaseScreen {
                 return new Bullet(0, 0, 0, 0, 0, new Texture(Gdx.files.internal("textures/bullet.png")), gameMode);
             }
         };
+
+        solidTexture = createSolidTexture();
     }
 
     private void initializeFonts() {
@@ -99,6 +112,20 @@ public class GameScreen extends BaseScreen {
         enemies = new Array<>();
         upgrades = new Array<>();
 
+        // Boss initialisieren falls Boss Rush Modus
+        if (isBossRushMode) {
+            try {
+                Texture bossTexture = new Texture(Gdx.files.internal("textures/boss.png"));
+                Texture bossBulletTexture = new Texture(Gdx.files.internal("textures/boss_bullet.png"));
+                boss = new Boss(bossLevel, bossTexture, bossBulletTexture);
+            } catch (Exception e) {
+                Gdx.app.error("GameScreen", "Failed to load boss textures, using fallback", e);
+                Texture bossTexture = new Texture(Gdx.files.internal("textures/enemy.png"));
+                Texture bossBulletTexture = new Texture(Gdx.files.internal("textures/bullet.png"));
+                boss = new Boss(bossLevel, bossTexture, bossBulletTexture);
+            }
+        }
+
         // Hintergrund initialisieren
         String bgPath = "textures/background.png";
         if (!Gdx.files.internal(bgPath).exists()) {
@@ -111,9 +138,8 @@ public class GameScreen extends BaseScreen {
 
     @Override
     public void render(float delta) {
-        // Kein ScreenUtils.clear mehr, wenn Hintergrund vorhanden
         if (background == null) {
-            ScreenUtils.clear(0.02f, 0.02f, 0.1f, 1f); // Fallback
+            ScreenUtils.clear(0.02f, 0.02f, 0.1f, 1f);
         }
 
         if (isGameOver) {
@@ -127,11 +153,94 @@ public class GameScreen extends BaseScreen {
 
     private void update(float delta) {
         if (background != null) {
-            background.update(delta); // Hintergrund scrollen
+            background.update(delta);
         }
 
         player.update(delta);
 
+        if (isBossRushMode) {
+            updateBossRush(delta);
+        } else {
+            updateNormalMode(delta);
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            game.setScreen(new MainMenuScreen(game));
+            dispose();
+        }
+    }
+
+    private void updateBossRush(float delta) {
+        if (boss != null) {
+            if (boss.isExploding()) {
+                // Boss ist am Explodieren - nur Explosion updaten
+                boss.update(delta);
+
+                // Prüfe ob Explosion beendet ist
+                if (boss.isExplosionFinished()) {
+                    // Boss komplett zerstört - nächsten Boss spawnen
+                    score += 100 * bossLevel;
+                    bossLevel++;
+                    if (bossLevel > Constants.BOSS_RUSH_MAX_LEVEL) {
+                        isGameOver = true;
+                    } else {
+                        try {
+                            Texture bossTexture = new Texture(Gdx.files.internal("textures/boss.png"));
+                            Texture bossBulletTexture = new Texture(Gdx.files.internal("textures/boss_bullet.png"));
+                            boss = new Boss(bossLevel, bossTexture, bossBulletTexture);
+                        } catch (Exception e) {
+                            Texture bossTexture = new Texture(Gdx.files.internal("textures/enemy.png"));
+                            Texture bossBulletTexture = new Texture(Gdx.files.internal("textures/bullet.png"));
+                            boss = new Boss(bossLevel, bossTexture, bossBulletTexture);
+                        }
+                    }
+                }
+            } else if (boss.isAlive()) {
+                // Boss ist lebendig - normale Updates
+                // Wähle eine der Bewegungsmethoden:
+                //boss.update(delta);
+                boss.updateWithSinusMovement(delta);
+
+                // Boss-Bullets Kollision mit Spieler
+                for (BossBullet bossBullet : boss.getBullets()) {
+                    if (bossBullet.isAlive() && player.getBounds().overlaps(bossBullet.getBounds())) {
+                        player.takeDamage(bossBullet.getDamage());
+                        bossBullet.destroy();
+                        if (!player.isAlive()) {
+                            isGameOver = true;
+                        }
+                    }
+                }
+
+                // Spieler-Bullets Kollision mit Boss
+                for (int i = bullets.size - 1; i >= 0; i--) {
+                    Bullet bullet = bullets.get(i);
+                    if (bullet.isAlive() && boss.getBounds().overlaps(bullet.getBounds())) {
+                        boss.takeDamage(bullet.getDamage());
+                        bullet.destroy();
+                    }
+                }
+            }
+        }
+
+        // Spieler kann schießen (immer)
+        if (Gdx.input.isKeyPressed(Input.Keys.SPACE) && player.canFire()) {
+            fireBullets();
+            player.resetFireTimer();
+        }
+
+        // Bullets updaten (immer)
+        for (int i = bullets.size - 1; i >= 0; i--) {
+            Bullet bullet = bullets.get(i);
+            bullet.update(delta);
+            if (!bullet.isAlive()) {
+                bullets.removeIndex(i);
+                bulletPool.free(bullet);
+            }
+        }
+    }
+
+    private void updateNormalMode(float delta) {
         if (gameMode.equals("Time Attack")) {
             timeLeft -= delta;
             if (timeLeft <= 0) {
@@ -188,11 +297,6 @@ public class GameScreen extends BaseScreen {
         }
 
         checkCollisions();
-
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-            game.setScreen(new MainMenuScreen(game));
-            dispose();
-        }
     }
 
     private float getSpawnInterval() {
@@ -297,7 +401,7 @@ public class GameScreen extends BaseScreen {
                     enemy.takeDamage(bullet.getDamage());
                     bullet.destroy();
                     if (!enemy.isAlive()) {
-                        enemies.removeIndex(j); // Entferne nur, wenn der Gegner tot ist
+                        enemies.removeIndex(j);
                         score += getScorePerEnemy();
                         if (MathUtils.random() < Constants.UPGRADE_SPAWN_CHANCE) {
                             spawnUpgrade(enemy.getPosition().x, enemy.getPosition().y);
@@ -306,7 +410,7 @@ public class GameScreen extends BaseScreen {
                             wave++;
                         }
                     }
-                    break; // Verlasse die innere Schleife nach Kollision
+                    break;
                 }
             }
         }
@@ -315,7 +419,7 @@ public class GameScreen extends BaseScreen {
             Enemy enemy = enemies.get(i);
             if (player.getBounds().overlaps(enemy.getBounds()) && enemy.isAlive()) {
                 player.takeDamage(1);
-                enemy.takeDamage(999); // Sofortiger Tod bei Kollision mit Spieler
+                enemy.takeDamage(999);
                 if (!player.isAlive()) {
                     isGameOver = true;
                 }
@@ -328,37 +432,127 @@ public class GameScreen extends BaseScreen {
 
     private void draw() {
         game.batch.begin();
+
+        // Hintergrund
         if (background != null) {
-            background.render(game.batch); // Hintergrund zeichnen
+            background.render(game.batch);
         }
+
+        // Spieler und Bullets (immer rendern)
         player.render(game.batch);
         for (Bullet bullet : bullets) {
             bullet.render(game.batch);
         }
-        for (Enemy enemy : enemies) {
-            enemy.render(game.batch);
-        }
-        for (Upgrade upgrade : upgrades) {
-            upgrade.render(game.batch);
+
+        // Modus-spezifische Entities
+        if (isBossRushMode) {
+            if (boss != null) {
+                boss.render(game.batch);
+            }
+        } else {
+            for (Enemy enemy : enemies) {
+                enemy.render(game.batch);
+            }
+            for (Upgrade upgrade : upgrades) {
+                upgrade.render(game.batch);
+            }
         }
 
+        // UI je nach Modus
+        drawUI();
+
+        game.batch.end();
+    }
+
+    private void drawUI() {
+        if (isBossRushMode) {
+            drawBossRushUI();
+        } else {
+            drawNormalUI();
+        }
+    }
+
+    private void drawBossRushUI() {
+        // Linke Seite - Spieler-Info (kompakt)
+        uiFont.draw(game.batch, "Score: " + score, 15, Constants.SCREEN_HEIGHT - 25);
+        uiFont.draw(game.batch, "Lvl: " + bossLevel, 15, Constants.SCREEN_HEIGHT - 50);
+        uiFont.draw(game.batch, "HP: " + (int) player.getHealth(), 15, Constants.SCREEN_HEIGHT - 75);
+        uiFont.draw(game.batch, "Bullets: " + player.getBulletLevel(), 15, Constants.SCREEN_HEIGHT - 100);
+
+        // Boss Health Bar nur anzeigen wenn Boss lebendig und nicht explodiert
+        if (boss != null && boss.isAlive() && !boss.isExploding()) {
+            drawBossHealthBar();
+        }
+
+        // Explosions-Info anzeigen
+        if (boss != null && boss.isExploding()) {
+            uiFont.setColor(1f, 0.5f, 0f, 1f); // Orange für Explosions-Text
+            uiFont.draw(game.batch, "BOSS EXPLODING!", Constants.SCREEN_WIDTH / 2 - 80, Constants.SCREEN_HEIGHT - 30);
+            uiFont.setColor(1, 1, 1, 1); // Zurück zu weiß
+        }
+    }
+
+    private void drawNormalUI() {
         uiFont.draw(game.batch, "Score: " + score, 10, Constants.SCREEN_HEIGHT - 10);
         uiFont.draw(game.batch, "Wave: " + wave, 10, Constants.SCREEN_HEIGHT - 35);
         uiFont.draw(game.batch, "Health: " + (int) player.getHealth(), 10, Constants.SCREEN_HEIGHT - 60);
         uiFont.draw(game.batch, "Bullets: Lvl " + player.getBulletLevel(), 10, Constants.SCREEN_HEIGHT - 85);
+
         if (gameMode.equals("Time Attack")) {
             uiFont.draw(game.batch, "Time: " + (int) timeLeft + "s", 10, Constants.SCREEN_HEIGHT - 110);
         }
-        game.batch.end();
+    }
+
+    private void drawBossHealthBar() {
+        float healthPercent = boss.getHealth() / boss.getMaxHealth();
+        float barWidth = 250;
+        float barHeight = 25;
+        float barX = Constants.SCREEN_WIDTH - barWidth - 250;
+        float barY = Constants.SCREEN_HEIGHT - 50;
+
+        // Hintergrund (dunkelrot)
+        game.batch.setColor(0.3f, 0, 0, 0.9f);
+        game.batch.draw(solidTexture, barX, barY, barWidth, barHeight);
+
+        // Lebensbalken (hellrot/grün basierend auf Gesundheit)
+        Color healthColor = healthPercent > 0.3f ?
+            new Color(1, 0, 0, 0.9f) : // Rot bei hoher Gesundheit
+            new Color(1, 0.5f, 0, 0.9f); // Orange bei niedriger Gesundheit
+
+        game.batch.setColor(healthColor);
+        game.batch.draw(solidTexture, barX, barY, barWidth * healthPercent, barHeight);
+        game.batch.setColor(1, 1, 1, 1);
+
+        // Rahmen
+        game.batch.setColor(1, 1, 1, 0.8f);
+        game.batch.draw(solidTexture, barX, barY, barWidth, 2); // Oben
+        game.batch.draw(solidTexture, barX, barY, 2, barHeight); // Links
+        game.batch.draw(solidTexture, barX + barWidth, barY, 2, barHeight); // Rechts
+        game.batch.draw(solidTexture, barX, barY + barHeight, barWidth, 2); // Unten
+        game.batch.setColor(1, 1, 1, 1);
+
+        // Health Text (zentriert über der Bar)
+        String healthText = "BOSS " + (int)boss.getHealth() + "/" + (int)boss.getMaxHealth();
+        float textX = barX + (barWidth - (healthText.length() * 8)) / 2; // Einfache Zentrierung
+        uiFont.draw(game.batch, healthText, textX, barY + barHeight + 20);
     }
 
     private void handleGameOver(float delta) {
         gameOverTimer += delta;
         float alpha = MathUtils.sin(gameOverTimer * 2) * 0.3f + 0.7f;
         game.batch.begin();
-        gameOverFont.setColor(1, 0, 0, alpha);
-        gameOverFont.draw(game.batch, "GAME OVER", Constants.SCREEN_WIDTH / 2 - 120, Constants.SCREEN_HEIGHT / 2);
-        uiFont.setColor(1, 1, 1, alpha);
+
+        if (isBossRushMode && bossLevel > Constants.BOSS_RUSH_MAX_LEVEL) {
+            gameOverFont.setColor(0, 1, 0, alpha);
+            gameOverFont.draw(game.batch, "VICTORY!", Constants.SCREEN_WIDTH / 2 - 100, Constants.SCREEN_HEIGHT / 2);
+            uiFont.setColor(1, 1, 1, alpha);
+            uiFont.draw(game.batch, "You defeated all bosses!", Constants.SCREEN_WIDTH / 2 - 120, Constants.SCREEN_HEIGHT / 2 - 50);
+        } else {
+            gameOverFont.setColor(1, 0, 0, alpha);
+            gameOverFont.draw(game.batch, "GAME OVER", Constants.SCREEN_WIDTH / 2 - 120, Constants.SCREEN_HEIGHT / 2);
+            uiFont.setColor(1, 1, 1, alpha);
+        }
+
         uiFont.draw(game.batch, "Final Score: " + score, Constants.SCREEN_WIDTH / 2 - 80, Constants.SCREEN_HEIGHT / 2 - 50);
         uiFont.draw(game.batch, "Press SPACE to restart", Constants.SCREEN_WIDTH / 2 - 120, Constants.SCREEN_HEIGHT / 2 - 100);
         game.batch.end();
@@ -372,23 +566,42 @@ public class GameScreen extends BaseScreen {
         }
     }
 
+    private Texture createSolidTexture() {
+        Texture texture = new Texture(1, 1, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
+        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        return texture;
+    }
+
     @Override
     public void dispose() {
-        uiFont.dispose();
-        gameOverFont.dispose();
-        player.dispose();
-        for (Bullet bullet : bullets) {
-            bullet.dispose();
+        if (uiFont != null) uiFont.dispose();
+        if (gameOverFont != null) gameOverFont.dispose();
+        if (player != null) player.dispose();
+
+        if (bullets != null) {
+            for (Bullet bullet : bullets) {
+                if (bullet != null) bullet.dispose();
+            }
+            bullets.clear();
         }
-        for (Enemy enemy : enemies) {
-            enemy.dispose();
+
+        if (enemies != null) {
+            for (Enemy enemy : enemies) {
+                if (enemy != null) enemy.dispose();
+            }
+            enemies.clear();
         }
-        for (Upgrade upgrade : upgrades) {
-            upgrade.dispose();
+
+        if (upgrades != null) {
+            for (Upgrade upgrade : upgrades) {
+                if (upgrade != null) upgrade.dispose();
+            }
+            upgrades.clear();
         }
-        bulletPool.clear();
-        if (background != null) {
-            background.dispose();
-        }
+
+        if (bulletPool != null) bulletPool.clear();
+        if (background != null) background.dispose();
+        if (boss != null) boss.dispose();
+        if (solidTexture != null) solidTexture.dispose();
     }
 }
