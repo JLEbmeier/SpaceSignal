@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.MathUtils;
+
 import de.spaceSignal.game.Main;
 import de.spaceSignal.game.util.Constants;
 import de.spaceSignal.game.util.ScrollingBackground;
@@ -35,8 +36,6 @@ public class GameSelectionScreen extends BaseScreen {
 
     private final GameMode[] modes = {
         new GameMode("Classic", "Traditional gameplay experience"),
-        new GameMode("Survival", "Endless waves of enemies"),
-        new GameMode("Time Attack", "Race against the clock"),
         new GameMode("Boss Rush", "Fight powerful bosses") // Kürzere Beschreibung
     };
 

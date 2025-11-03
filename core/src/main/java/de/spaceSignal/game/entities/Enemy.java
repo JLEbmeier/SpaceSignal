@@ -120,6 +120,11 @@ public class Enemy {
     }
 
     public void dispose() {
-        sprite.getTexture().dispose();
+        // Textures from enemies are provided by the central AssetManager and must not be disposed here.
+        // Only clear internal collections to release references.
+        for (Bullet b : bullets) {
+            if (b != null) b.destroy();
+        }
+        bullets.clear();
     }
 }

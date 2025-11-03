@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+
 import de.spaceSignal.game.util.Constants;
 
 public class Bullet {
@@ -78,7 +79,7 @@ public class Bullet {
     }
 
     public void dispose() {
-        sprite.getTexture().dispose();
+        // Bullet textures are managed centrally (AssetManager); do not dispose here.
     }
 
     public Rectangle getBounds() { return bounds; }

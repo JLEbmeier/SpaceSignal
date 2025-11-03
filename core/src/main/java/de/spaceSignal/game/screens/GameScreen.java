@@ -627,9 +627,7 @@ public class GameScreen extends BaseScreen {
         if (player != null) player.dispose();
 
         if (bullets != null) {
-            for (Bullet bullet : bullets) {
-                if (bullet != null) bullet.dispose();
-            }
+            // Bullets use shared textures from AssetManager; do not dispose their textures here.
             bullets.clear();
         }
 
