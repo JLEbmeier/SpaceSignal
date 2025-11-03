@@ -27,36 +27,41 @@ public class AssetManager implements Disposable {
     }
 
     public void loadAll() {
-        // Lade Musik
-        manager.load("audio/music/background.mp3", Music.class);
-        
-        // Lade Soundeffekte
-        manager.load("audio/sounds/shoot.wav", Sound.class);
-        manager.load("audio/sounds/explosion.wav", Sound.class);
-        manager.load("audio/sounds/powerup.wav", Sound.class);
+        try {
+            // Lade Musik
+            manager.load("audio/music/background.mp3", Music.class);
+            
+            // Lade Soundeffekte
+            manager.load("audio/sounds/shoot.wav", Sound.class);
+            manager.load("audio/sounds/explosion.wav", Sound.class);
+            manager.load("audio/sounds/powerup.wav", Sound.class);
 
-        // Lade Gegner-Texturen
-        manager.load("textures/enemies/enemy.png", Texture.class);
-        manager.load("textures/enemies/scout.png", Texture.class);
-        manager.load("textures/enemies/bomber.png", Texture.class);
-        manager.load("textures/enemies/bullet.png", Texture.class);
+            // Lade Gegner-Texturen
+            manager.load("textures/enemies/enemy.png", Texture.class);
+            manager.load("textures/enemies/scout.png", Texture.class);
+            manager.load("textures/enemies/bomber.png", Texture.class);
+            manager.load("textures/enemies/bullet.png", Texture.class);
 
-        // Warte bis alles geladen ist
-        manager.finishLoading();
+            // Warte bis alles geladen ist
+            manager.finishLoading();
 
-        // Speichere die Texturen
-        enemyTexture = manager.get("textures/enemies/enemy.png", Texture.class);
-        scoutTexture = manager.get("textures/enemies/scout.png", Texture.class);
-        bomberTexture = manager.get("textures/enemies/bomber.png", Texture.class);
-        bulletTexture = manager.get("textures/enemies/bullet.png", Texture.class);
+            // Speichere die Texturen
+            enemyTexture = manager.get("textures/enemies/enemy.png", Texture.class);
+            scoutTexture = manager.get("textures/enemies/scout.png", Texture.class);
+            bomberTexture = manager.get("textures/enemies/bomber.png", Texture.class);
+            bulletTexture = manager.get("textures/enemies/bullet.png", Texture.class);
 
-        // Initialisiere den AudioManager mit den geladenen Assets
-        AudioManager.getInstance().setAssets(
-            manager.get("audio/music/background.mp3", Music.class),
-            manager.get("audio/sounds/shoot.wav", Sound.class),
-            manager.get("audio/sounds/explosion.wav", Sound.class),
-            manager.get("audio/sounds/powerup.wav", Sound.class)
-        );
+            // Initialisiere den AudioManager mit den geladenen Assets
+            AudioManager.getInstance().setAssets(
+                manager.get("audio/music/background.mp3", Music.class),
+                manager.get("audio/sounds/shoot.wav", Sound.class),
+                manager.get("audio/sounds/explosion.wav", Sound.class),
+                manager.get("audio/sounds/powerup.wav", Sound.class)
+            );
+        } catch (com.badlogic.gdx.utils.GdxRuntimeException e) {
+            com.badlogic.gdx.Gdx.app.error("AssetManager", "Failed to load assets: " + e.getMessage());
+            throw e; // Re-throw damit das Spiel nicht mit kaputten Assets startet
+        }
     }
 
     // Getter für die Texturen
