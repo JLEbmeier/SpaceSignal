@@ -22,6 +22,7 @@ import de.spaceSignal.game.entities.ScoutEnemy;
 import de.spaceSignal.game.entities.Upgrade;
 import de.spaceSignal.game.managers.AssetManager;
 import de.spaceSignal.game.systems.SpawnSystem;
+import de.spaceSignal.game.systems.UpgradeSystem;
 import de.spaceSignal.game.util.Constants;
 import de.spaceSignal.game.util.ScrollingBackground;
 
@@ -33,6 +34,7 @@ public class GameScreen extends BaseScreen {
     private Array<Enemy> enemies;
     private Array<Upgrade> upgrades;
     private SpawnSystem spawnSystem;
+    private UpgradeSystem upgradeSystem;
     private int score;
     private int wave;
     private float timeLeft;
@@ -123,6 +125,7 @@ public class GameScreen extends BaseScreen {
         bullets = new Array<>();
         enemies = new Array<>();
         upgrades = new Array<>();
+        upgradeSystem = new UpgradeSystem();
 
         // Boss initialisieren falls Boss Rush Modus
         if (isBossRushMode) {
@@ -290,7 +293,9 @@ public class GameScreen extends BaseScreen {
             if (!enemy.isAlive()) {
                 enemies.removeIndex(i);
                 score += getScorePerEnemy();
-                if (MathUtils.random() < Constants.UPGRADE_SPAWN_CHANCE) {
+                // Prüfe ob überhaupt noch Upgrades verfügbar sind
+                String possibleUpgrade = upgradeSystem.getValidUpgradeType(player);
+                if (possibleUpgrade != null && MathUtils.random() < Constants.UPGRADE_SPAWN_CHANCE) {
                     spawnUpgrade(enemy.getPosition().x, enemy.getPosition().y);
                 }
                 if (score % 100 == 0) {
@@ -307,7 +312,10 @@ public class GameScreen extends BaseScreen {
             if (!upgrade.isAlive()) {
                 upgrades.removeIndex(i);
             } else if (player.getBounds().overlaps(upgrade.getBounds())) {
-                player.applyUpgrade(upgrade.getType());
+                String type = upgrade.getType();
+                if (upgradeSystem.isUpgradeValid(type, player)) {
+                    player.applyUpgrade(type);
+                }
                 upgrade.collect();
             }
         }
@@ -406,16 +414,17 @@ public class GameScreen extends BaseScreen {
     }
 
     private void spawnUpgrade(float x, float y) {
-        String[] types = {"BulletLevel", "Health", "Damage"};
-        String type = types[MathUtils.random(0, types.length - 1)];
-        Texture upgradeTexture;
-        try {
-            upgradeTexture = new Texture(Gdx.files.internal("textures/upgrade_" + type.toLowerCase() + ".png"));
-        } catch (Exception e) {
-            Gdx.app.error("GameScreen", "Failed to load upgrade texture, using fallback", e);
-            upgradeTexture = new Texture(Gdx.files.internal("textures/upgrade.png"));
+        String type = upgradeSystem.getValidUpgradeType(player);
+        if (type != null) {  // Nur spawnen wenn es ein gültiges Upgrade gibt
+            Texture upgradeTexture;
+            try {
+                upgradeTexture = new Texture(Gdx.files.internal("textures/upgrade_" + type.toLowerCase() + ".png"));
+            } catch (Exception e) {
+                Gdx.app.error("GameScreen", "Failed to load upgrade texture, using fallback", e);
+                upgradeTexture = new Texture(Gdx.files.internal("textures/upgrade.png"));
+            }
+            upgrades.add(new Upgrade(x, y, type, upgradeTexture));
         }
-        upgrades.add(new Upgrade(x, y, type, upgradeTexture));
     }
 
     private float getEnemyHealth() {
