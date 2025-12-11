@@ -35,8 +35,10 @@ public class GameSelectionScreen extends BaseScreen {
     }
 
     private final GameMode[] modes = {
-        new GameMode("Classic", "Traditional gameplay experience"),
-        new GameMode("Boss Rush", "Fight powerful bosses") // Kürzere Beschreibung
+        new GameMode("Classic", "Traditional space shooter gameplay"),
+        new GameMode("Boss Rush", "Fight powerful bosses back-to-back"),
+        new GameMode("Survival", "Survive endless enemy waves"),
+        new GameMode("Flappy", "Flappy Bird meets space shooter!")
     };
 
     private int selectedIndex = 0;
@@ -56,21 +58,21 @@ public class GameSelectionScreen extends BaseScreen {
             FreeTypeFontGenerator.FreeTypeFontParameter param = new FreeTypeFontGenerator.FreeTypeFontParameter();
             float scaleFactor = Constants.SCREEN_WIDTH / 1280f;
 
-            // Kleinere Titel-Font für mehr Platz
+            // Title Font
             param.size = (int) (36 * scaleFactor);
             param.color = new Color(0.3f, 0.85f, 1f, 1f);
             param.borderColor = new Color(0.1f, 0.4f, 0.6f, 1f);
             param.borderWidth = 1.5f * scaleFactor;
             titleFont = generator.generateFont(param);
 
-            // Kleinere Menu-Font
+            // Menu Font
             param.size = (int) (22 * scaleFactor);
             param.color = Color.WHITE;
             param.borderColor = new Color(0.3f, 0.3f, 0.4f, 1f);
             param.borderWidth = 1.2f * scaleFactor;
             menuFont = generator.generateFont(param);
 
-            // Kleinere Beschreibungs-Font
+            // Description Font
             param.size = (int) (14 * scaleFactor);
             param.color = new Color(0.7f, 0.8f, 0.9f, 1f);
             param.borderWidth = 0;
@@ -131,7 +133,7 @@ public class GameSelectionScreen extends BaseScreen {
         // Smooth animations
         for (int i = 0; i < modes.length; i++) {
             GameMode mode = modes[i];
-            float targetScale = (i == selectedIndex) ? 1.10f : 1f; // Weniger Skalierung
+            float targetScale = (i == selectedIndex) ? 1.10f : 1f;
             float targetAlpha = (i == selectedIndex) ? 1f : 0.6f;
             float targetGlow = (i == selectedIndex) ? 1f : 0f;
 
@@ -160,12 +162,12 @@ public class GameSelectionScreen extends BaseScreen {
 
         layout.setText(titleFont, "Select Game Mode");
         float titleX = (Constants.SCREEN_WIDTH - layout.width) / 2;
-        float titleY = Constants.SCREEN_HEIGHT * 0.78f; // Höher positioniert
+        float titleY = Constants.SCREEN_HEIGHT * 0.78f;
         titleFont.draw(game.batch, "Select Game Mode", titleX, titleY);
 
-        // Menüpunkte mit mehr Platz
-        float menuY = Constants.SCREEN_HEIGHT * 0.55f; // Mehr Platz nach oben
-        float lineSpacing = 60 * (Constants.SCREEN_HEIGHT / 480f); // Weniger Abstand
+        // Menüpunkte
+        float menuY = Constants.SCREEN_HEIGHT * 0.55f;
+        float lineSpacing = 60 * (Constants.SCREEN_HEIGHT / 480f);
 
         for (int i = 0; i < modes.length; i++) {
             GameMode mode = modes[i];
@@ -186,7 +188,7 @@ public class GameSelectionScreen extends BaseScreen {
             float yPos = menuY - i * lineSpacing;
 
             menuFont.draw(game.batch, mode.name, menuX, yPos);
-            menuFont.getData().setScale(1f); // Zurücksetzen
+            menuFont.getData().setScale(1f);
 
             // Beschreibung für ausgewähltes Item
             if (i == selectedIndex) {
@@ -194,7 +196,7 @@ public class GameSelectionScreen extends BaseScreen {
                 layout.setText(descFont, mode.description);
                 float descX = (Constants.SCREEN_WIDTH - layout.width) / 2;
                 descFont.draw(game.batch, mode.description, descX,
-                    yPos - 25 * (Constants.SCREEN_HEIGHT / 480f)); // Weniger Abstand
+                    yPos - 25 * (Constants.SCREEN_HEIGHT / 480f));
             }
         }
 
