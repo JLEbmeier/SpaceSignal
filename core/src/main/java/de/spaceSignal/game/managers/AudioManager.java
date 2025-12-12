@@ -2,20 +2,26 @@ package de.spaceSignal.game.managers;
 
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
-import com.badlogic.gdx.utils.Disposable;
 
-public class AudioManager implements Disposable {
+public class AudioManager {
     private static AudioManager instance;
+
     private Music backgroundMusic;
     private Sound shootSound;
     private Sound explosionSound;
     private Sound powerupSound;
-    private float soundVolume = 1.0f;
-    private float musicVolume = 0.5f;
-    private boolean soundEnabled = true;
-    private boolean musicEnabled = true;
 
-    private AudioManager() {}
+    // Lautstärke-Einstellungen (0.0 bis 1.0)
+    private float musicVolume = 0.5f;
+    private float soundVolume = 0.7f;
+
+    // Ein/Aus-Einstellungen
+    private boolean musicEnabled = true;
+    private boolean soundEnabled = true;
+
+    private AudioManager() {
+        // Private Konstruktor für Singleton
+    }
 
     public static AudioManager getInstance() {
         if (instance == null) {
@@ -24,73 +30,129 @@ public class AudioManager implements Disposable {
         return instance;
     }
 
-    public void setAssets(Music bgMusic, Sound shoot, Sound explosion, Sound powerup) {
-        this.backgroundMusic = bgMusic;
-        this.shootSound = shoot;
-        this.explosionSound = explosion;
-        this.powerupSound = powerup;
-        
+    public void setAssets(Music backgroundMusic, Sound shootSound, Sound explosionSound, Sound powerupSound) {
+        this.backgroundMusic = backgroundMusic;
+        this.shootSound = shootSound;
+        this.explosionSound = explosionSound;
+        this.powerupSound = powerupSound;
+
         if (backgroundMusic != null) {
             backgroundMusic.setLooping(true);
             backgroundMusic.setVolume(musicVolume);
+            if (musicEnabled) {
+                backgroundMusic.play();
+            }
         }
     }
 
+    // Musik-Kontrolle
     public void playBackgroundMusic() {
-        if (musicEnabled && backgroundMusic != null) {
+        if (backgroundMusic != null && musicEnabled && !backgroundMusic.isPlaying()) {
             backgroundMusic.play();
         }
     }
 
+    public void stopBackgroundMusic() {
+        if (backgroundMusic != null && backgroundMusic.isPlaying()) {
+            backgroundMusic.stop();
+        }
+    }
+
     public void pauseBackgroundMusic() {
-        if (backgroundMusic != null) {
+        if (backgroundMusic != null && backgroundMusic.isPlaying()) {
             backgroundMusic.pause();
         }
     }
 
+    // Sound-Effekte
     public void playShootSound() {
-        if (soundEnabled && shootSound != null) {
+        if (shootSound != null && soundEnabled) {
             shootSound.play(soundVolume);
         }
     }
 
     public void playExplosionSound() {
-        if (soundEnabled && explosionSound != null) {
+        if (explosionSound != null && soundEnabled) {
             explosionSound.play(soundVolume);
         }
     }
 
     public void playPowerupSound() {
-        if (soundEnabled && powerupSound != null) {
+        if (powerupSound != null && soundEnabled) {
             powerupSound.play(soundVolume);
         }
     }
 
-    public void setSoundVolume(float volume) {
-        this.soundVolume = Math.max(0, Math.min(1, volume));
+    // Lautstärke-Einstellungen
+    public void setMusicVolume(float volume) {
+        this.musicVolume = Math.max(0f, Math.min(1f, volume));
+        if (backgroundMusic != null) {
+            backgroundMusic.setVolume(this.musicVolume);
+        }
     }
 
-    public void setMusicVolume(float volume) {
-        this.musicVolume = Math.max(0, Math.min(1, volume));
+    public float getMusicVolume() {
+        return musicVolume;
+    }
+
+    public void setSoundVolume(float volume) {
+        this.soundVolume = Math.max(0f, Math.min(1f, volume));
+    }
+
+    public float getSoundVolume() {
+        return soundVolume;
+    }
+
+    // Ein/Aus-Kontrolle
+    public void setMusicEnabled(boolean enabled) {
+        this.musicEnabled = enabled;
         if (backgroundMusic != null) {
-            backgroundMusic.setVolume(musicVolume);
+            if (enabled && !backgroundMusic.isPlaying()) {
+                backgroundMusic.play();
+            } else if (!enabled && backgroundMusic.isPlaying()) {
+                backgroundMusic.pause();
+            }
         }
+    }
+
+    public boolean isMusicEnabled() {
+        return musicEnabled;
     }
 
     public void setSoundEnabled(boolean enabled) {
         this.soundEnabled = enabled;
     }
 
-    public void setMusicEnabled(boolean enabled) {
-        this.musicEnabled = enabled;
-        if (!enabled && backgroundMusic != null) {
-            backgroundMusic.pause();
-        } else if (enabled && backgroundMusic != null) {
-            backgroundMusic.play();
-        }
+    public boolean isSoundEnabled() {
+        return soundEnabled;
     }
 
-    @Override
+    // Lautstärke um 10% erhöhen
+    public void increaseMusicVolume() {
+        setMusicVolume(musicVolume + 0.1f);
+    }
+
+    public void decreaseMusicVolume() {
+        setMusicVolume(musicVolume - 0.1f);
+    }
+
+    public void increaseSoundVolume() {
+        setSoundVolume(soundVolume + 0.1f);
+    }
+
+    public void decreaseSoundVolume() {
+        setSoundVolume(soundVolume - 0.1f);
+    }
+
+    // Toggle-Funktionen
+    public void toggleMusic() {
+        setMusicEnabled(!musicEnabled);
+    }
+
+    public void toggleSound() {
+        setSoundEnabled(!soundEnabled);
+    }
+
     public void dispose() {
         if (backgroundMusic != null) {
             backgroundMusic.dispose();
