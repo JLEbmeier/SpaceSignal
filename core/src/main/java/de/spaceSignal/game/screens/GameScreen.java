@@ -6,7 +6,6 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.ScreenUtils;
@@ -114,8 +113,8 @@ public class GameScreen extends BaseScreen {
             case "Boss Rush":
                 currentGameMode = new BossRushMode(player, bullets, enemies, upgrades);
                 break;
-            case "Survival":
-                currentGameMode = new SurvivalMode(player, bullets, enemies, upgrades);
+            case "Asteroid Dodger":
+                currentGameMode = new AsteroidDodgerMode(player, bullets, enemies, upgrades);
                 break;
             case "Flappy":
                 currentGameMode = new FlappyMode(player, bullets, enemies, upgrades);
