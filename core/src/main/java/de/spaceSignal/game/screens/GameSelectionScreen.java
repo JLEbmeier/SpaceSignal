@@ -37,7 +37,7 @@ public class GameSelectionScreen extends BaseScreen {
     private final GameMode[] modes = {
         new GameMode("Classic", "Traditional space shooter gameplay"),
         new GameMode("Boss Rush", "Fight powerful bosses back-to-back"),
-        new GameMode("Survival", "Survive endless enemy waves"),
+        new GameMode("Asteroid Dodger", "Dodge this!"),
         new GameMode("Flappy", "Flappy Bird meets space shooter!")
     };
 
