@@ -18,36 +18,31 @@ import de.spaceSignal.game.managers.AssetManager;
 import de.spaceSignal.game.managers.AudioManager;
 import de.spaceSignal.game.util.Constants;
 
-/**
- * Flappy Bird inspirierter Spielmodus mit Space Signal Twist:
- * - Spieler fliegt nach oben beim Drücken von SPACE
- * - Schwerkraft zieht nach unten
- * - Hindernisse (Asteroids/Pipes) kommen von rechts
- * - Kann während des Fluges schießen (mit SHIFT)
- * - Power-Ups erscheinen zwischen Hindernissen
- */
 public class FlappyMode extends GameMode {
-    // Flappy-spezifische Physik
     private float velocity;
     private float gravity;
     private float flapStrength;
 
-    // Hindernisse
     private Array<Obstacle> obstacles;
     private float obstacleTimer;
     private float obstacleSpawnInterval;
 
-    // Extras
     private Array<PowerUp> powerUps;
     private float powerUpTimer;
     private int passedObstacles;
 
-    // Texturen
     private Texture obstacleTexture;
     private Texture solidTexture;
 
-    // Spieler-Position für Flappy-Steuerung
     private Vector2 playerPos;
+
+    // Fix für Sprite Stretching
+    private float playerWidth = Constants.PLAYER_WIDTH;
+    private float playerHeight = Constants.PLAYER_HEIGHT;
+
+    // Fix für Dauer-Schießen
+    private float shootCooldown = 0f;
+    private static final float SHOOT_COOLDOWN_TIME = 0.3f;
 
     private static class Obstacle {
         Rectangle top;
@@ -68,9 +63,7 @@ public class FlappyMode extends GameMode {
         }
 
         void updateBounds() {
-            // Oberes Hindernis
-            top = new Rectangle(x, gapY + gapSize / 2, 60, Constants.SCREEN_HEIGHT);
-            // Unteres Hindernis
+            top = new Rectangle(x, gapY + gapSize / 2, 60, Constants.SCREEN_HEIGHT - (gapY + gapSize / 2));
             bottom = new Rectangle(x, 0, 60, gapY - gapSize / 2);
         }
 
@@ -122,27 +115,25 @@ public class FlappyMode extends GameMode {
     public FlappyMode(Player player, Array<Bullet> bullets, Array<Enemy> enemies, Array<Upgrade> upgrades) {
         super(player, bullets, enemies, upgrades);
 
-        // Flappy-Physik
+        // Schießen deaktivieren für Flappy Mode
+        player.setCanShoot(false);
+
         velocity = 0;
         gravity = -800f;
         flapStrength = 350f;
 
-        // Hindernisse
         obstacles = new Array<>();
         obstacleTimer = 0;
         obstacleSpawnInterval = 2.0f;
         passedObstacles = 0;
 
-        // Power-Ups
         powerUps = new Array<>();
         powerUpTimer = 0;
 
-        // Spieler-Position für Flappy
         playerPos = new Vector2(100, Constants.SCREEN_HEIGHT / 2);
 
-        // Texturen
         try {
-            obstacleTexture = new Texture(Gdx.files.internal("textures/enemy.png"));
+            obstacleTexture = new Texture(Gdx.files.internal("textures/obstacle.png"));
         } catch (Exception e) {
             obstacleTexture = AssetManager.getInstance().getEnemyTexture();
         }
@@ -151,10 +142,15 @@ public class FlappyMode extends GameMode {
 
     @Override
     public void update(float delta) {
+        // Shoot Cooldown updaten
+        if (shootCooldown > 0) {
+            shootCooldown -= delta;
+        }
+
         // Flappy-Steuerung: SPACE zum Fliegen
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
             velocity = flapStrength;
-            AudioManager.getInstance().playShootSound(); // Flap-Sound
+            AudioManager.getInstance().playShootSound();
         }
 
         // Schwerkraft anwenden
@@ -167,36 +163,33 @@ public class FlappyMode extends GameMode {
             velocity = 0;
             setGameOver(true);
         }
-        if (playerPos.y >= Constants.SCREEN_HEIGHT - Constants.PLAYER_HEIGHT) {
-            playerPos.y = Constants.SCREEN_HEIGHT - Constants.PLAYER_HEIGHT;
+        if (playerPos.y >= Constants.SCREEN_HEIGHT - playerHeight) {
+            playerPos.y = Constants.SCREEN_HEIGHT - playerHeight;
             velocity = 0;
         }
 
-        // Spieler-Position synchronisieren
+        // Spieler-Position synchronisieren OHNE Sprite zu stretchen
         player.getPosition().set(playerPos.x, playerPos.y);
 
-        // Schießen mit SHIFT (optional, für Extra-Spaß)
-        if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) && player.canFire()) {
-            // Bullets werden im GameScreen verwaltet
-            player.resetFireTimer();
-        }
+        // KEIN Schießen in FlappyMode mehr möglich
 
         // Hindernisse spawnen
         obstacleTimer += delta;
         if (obstacleTimer >= obstacleSpawnInterval) {
             spawnObstacle();
             obstacleTimer = 0;
-            obstacleSpawnInterval = MathUtils.random(1.5f, 2.5f); // Variabel
+            obstacleSpawnInterval = MathUtils.random(1.8f, 2.8f);
         }
 
         // Hindernisse updaten
-        float obstacleSpeed = 200f + (passedObstacles * 5f); // Wird schneller
+        float obstacleSpeed = 200f + (passedObstacles * 3f);
         for (int i = obstacles.size - 1; i >= 0; i--) {
             Obstacle obstacle = obstacles.get(i);
             obstacle.update(delta, obstacleSpeed);
 
             // Kollision prüfen
-            if (obstacle.collidesWith(player.getBounds())) {
+            Rectangle playerBounds = new Rectangle(playerPos.x, playerPos.y, playerWidth, playerHeight);
+            if (obstacle.collidesWith(playerBounds)) {
                 setGameOver(true);
                 AudioManager.getInstance().playExplosionSound();
             }
@@ -206,28 +199,15 @@ public class FlappyMode extends GameMode {
                 obstacle.passed = true;
                 passedObstacles++;
                 incrementScore(10);
+                AudioManager.getInstance().playPowerupSound();
 
-                // Schwierigkeit erhöhen
                 if (passedObstacles % 5 == 0) {
                     incrementWave();
                 }
             }
 
-            // Hindernis mit Bullets zerstören (Bonus-Feature!)
-            for (int j = bullets.size - 1; j >= 0; j--) {
-                Bullet bullet = bullets.get(j);
-                if (!obstacle.destroyed &&
-                    (obstacle.top.overlaps(bullet.getBounds()) ||
-                        obstacle.bottom.overlaps(bullet.getBounds()))) {
-                    obstacle.destroyed = true;
-                    bullet.destroy();
-                    incrementScore(5); // Bonus-Punkte
-                    AudioManager.getInstance().playExplosionSound();
-                    break;
-                }
-            }
+            // Hindernisse können NICHT mehr zerstört werden (kein Schießen)
 
-            // Entfernen wenn off-screen
             if (obstacle.isOffScreen()) {
                 obstacles.removeIndex(i);
             }
@@ -235,7 +215,7 @@ public class FlappyMode extends GameMode {
 
         // Power-Ups spawnen
         powerUpTimer += delta;
-        if (powerUpTimer >= 5f && MathUtils.random() < 0.3f) {
+        if (powerUpTimer >= 6f && MathUtils.random() < 0.4f) {
             spawnPowerUp();
             powerUpTimer = 0;
         }
@@ -245,7 +225,8 @@ public class FlappyMode extends GameMode {
             PowerUp powerUp = powerUps.get(i);
             powerUp.update(delta, obstacleSpeed);
 
-            if (!powerUp.collected && powerUp.bounds.overlaps(player.getBounds())) {
+            Rectangle playerBounds = new Rectangle(playerPos.x, playerPos.y, playerWidth, playerHeight);
+            if (!powerUp.collected && powerUp.bounds.overlaps(playerBounds)) {
                 powerUp.collected = true;
                 player.applyUpgrade(powerUp.type);
                 incrementScore(20);
@@ -258,9 +239,9 @@ public class FlappyMode extends GameMode {
     }
 
     private void spawnObstacle() {
-        float gapSize = MathUtils.random(120f, 180f);
-        float minY = 100f;
-        float maxY = Constants.SCREEN_HEIGHT - 100f;
+        float gapSize = MathUtils.random(140f, 200f);
+        float minY = 150f;
+        float maxY = Constants.SCREEN_HEIGHT - 150f;
         float gapY = MathUtils.random(minY, maxY);
 
         obstacles.add(new Obstacle(Constants.SCREEN_WIDTH, gapY, gapSize));
@@ -268,27 +249,29 @@ public class FlappyMode extends GameMode {
 
     private void spawnPowerUp() {
         float x = Constants.SCREEN_WIDTH;
-        float y = MathUtils.random(80f, Constants.SCREEN_HEIGHT - 80f);
+        float y = MathUtils.random(100f, Constants.SCREEN_HEIGHT - 100f);
         String type = MathUtils.random() < 0.5f ? "Health" : "Damage";
         powerUps.add(new PowerUp(x, y, type));
     }
 
     @Override
     public void renderEntities(SpriteBatch batch) {
+        // Spieler rendern (OHNE Stretching)
+        batch.draw(player.getSprite().getTexture(),
+            playerPos.x, playerPos.y,
+            playerWidth, playerHeight);
+
         // Hindernisse rendern
         for (Obstacle obstacle : obstacles) {
             if (!obstacle.destroyed) {
-                // Oberes Hindernis
                 batch.setColor(0.8f, 0.2f, 0.2f, 1f);
                 batch.draw(solidTexture, obstacle.top.x, obstacle.top.y,
                     obstacle.top.width, obstacle.top.height);
-
-                // Unteres Hindernis
                 batch.draw(solidTexture, obstacle.bottom.x, obstacle.bottom.y,
                     obstacle.bottom.width, obstacle.bottom.height);
                 batch.setColor(1, 1, 1, 1);
 
-                // Textur-Overlay für Details
+                // Textur-Overlay
                 for (float y = obstacle.top.y; y < Constants.SCREEN_HEIGHT; y += 32) {
                     batch.draw(obstacleTexture, obstacle.top.x, y, 60, 32);
                 }
@@ -296,7 +279,6 @@ public class FlappyMode extends GameMode {
                     batch.draw(obstacleTexture, obstacle.bottom.x, y, 60, 32);
                 }
             } else {
-                // Zerstörte Hindernisse ausblenden
                 batch.setColor(0.5f, 0.5f, 0.5f, 0.3f);
                 batch.draw(solidTexture, obstacle.top.x, obstacle.top.y,
                     obstacle.top.width, obstacle.top.height);
@@ -326,9 +308,8 @@ public class FlappyMode extends GameMode {
         uiFont.draw(batch, "Passed: " + passedObstacles, 10, Constants.SCREEN_HEIGHT - 35);
         uiFont.draw(batch, "Health: " + (int) player.getHealth(), 10, Constants.SCREEN_HEIGHT - 60);
 
-        // Steuerungs-Hinweis
         uiFont.setColor(0.8f, 0.8f, 0.8f, 0.6f);
-        uiFont.draw(batch, "SPACE: Fly  SHIFT: Shoot", 10, Constants.SCREEN_HEIGHT - 85);
+        uiFont.draw(batch, "SPACE: Fly", 10, Constants.SCREEN_HEIGHT - 85);
         uiFont.setColor(1, 1, 1, 1);
     }
 
@@ -354,6 +335,5 @@ public class FlappyMode extends GameMode {
     @Override
     public void dispose() {
         if (solidTexture != null) solidTexture.dispose();
-        // obstacleTexture wird vom AssetManager verwaltet
     }
 }
