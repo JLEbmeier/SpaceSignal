@@ -21,6 +21,7 @@ public class Player {
     private int bulletLevel;
     private float damageMultiplier;
     private boolean alive;
+    private boolean canShoot; // Für Modi wie Flappy
 
     public Player(float x, float y, Texture texture) {
         position = new Vector2(x, y);
@@ -33,6 +34,7 @@ public class Player {
         bulletLevel = 1;
         damageMultiplier = 1f;
         alive = true;
+        canShoot = true; // Standardmäßig kann geschossen werden
     }
 
     public void update(float delta) {
@@ -62,25 +64,23 @@ public class Player {
         health -= damage;
         if (health <= 0) {
             alive = false;
-            // Play explosion sound when player dies
             AudioManager.getInstance().playExplosionSound();
         }
     }
 
     public boolean canFire() {
-        return fireTimer >= Constants.PLAYER_FIRE_RATE && alive;
+        return canShoot && fireTimer >= Constants.PLAYER_FIRE_RATE && alive;
     }
 
     public void resetFireTimer() {
         fireTimer = 0;
-        // Play shoot sound when firing
         AudioManager.getInstance().playShootSound();
     }
 
     public void applyUpgrade(String type) {
         switch (type) {
             case "BulletLevel":
-                bulletLevel = Math.min(bulletLevel + 1, 3); // Max Level 3
+                bulletLevel = Math.min(bulletLevel + 1, 3);
                 break;
             case "Health":
                 health = Math.min(health + 1, Constants.PLAYER_MAX_HEALTH);
@@ -89,8 +89,20 @@ public class Player {
                 damageMultiplier += 0.5f;
                 break;
         }
-        // Play powerup sound when collecting any upgrade
         AudioManager.getInstance().playPowerupSound();
+    }
+
+    // Getter und Setter für canShoot
+    public void setCanShoot(boolean canShoot) {
+        this.canShoot = canShoot;
+    }
+
+    public boolean getCanShoot() {
+        return canShoot;
+    }
+
+    public Sprite getSprite() {
+        return sprite;
     }
 
     public Vector2 getPosition() {
