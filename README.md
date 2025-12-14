@@ -49,7 +49,7 @@ Das Projekt verwendet **Gradle** zur Verwaltung von Abhängigkeiten und zum Buil
 ### 1. Repository klonen
 
 ```bash
-git clone <Ihr-Repository-URL>
+git clone https://github.com/JLEbmeier/SpaceSignal
 cd SpaceSignal
 ```
 
