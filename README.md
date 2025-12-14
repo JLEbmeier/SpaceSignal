@@ -62,17 +62,3 @@ cd SpaceSignal
 ```bash
 ./gradlew lwjgl3:run
 ```
-
-### 4. Erzeugen einer ausführbaren JAR-Datei
-```bash
-lwjgl3/build/libs/SpaceSignal-lwjgl3.jar
-```
-# Die fertige JAR-Datei befindet sich anschließend unter:
-
-```text
-lwjgl3/build/libs/SpaceSignal-lwjgl3.jar
-```
-# Starten Sie die JAR mit:
-```bash
-java -jar lwjgl3/build/libs/SpaceSignal-lwjgl3.jar
-```
